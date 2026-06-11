@@ -108,25 +108,6 @@ To install into another skills directory, pass `--target`:
 npx @lixiansen/classmap-skill install --target ~/.codex/skills
 ```
 
-To uninstall, delete the installed skill directories:
-
-```bash
-rm -rf ~/.agents/skills/classmap-maintain ~/.agents/skills/classmap-target
-```
-
-Before publishing, verify the packed package locally:
-
-```bash
-npm pack
-npx ./lixiansen-classmap-skill-0.1.0.tgz install --target ./tmp-skills
-```
-
-Publish to npm:
-
-```bash
-npm publish --access public
-```
-
 ### Usage
 
 #### 1. Create the first code responsibility map

@@ -108,25 +108,6 @@ npx @lixiansen/classmap-skill install
 npx @lixiansen/classmap-skill install --target ~/.codex/skills
 ```
 
-卸载时删除对应目录即可：
-
-```bash
-rm -rf ~/.agents/skills/classmap-maintain ~/.agents/skills/classmap-target
-```
-
-发布前可以用本地包验证安装行为：
-
-```bash
-npm pack
-npx ./lixiansen-classmap-skill-0.1.0.tgz install --target ./tmp-skills
-```
-
-发布到 npm：
-
-```bash
-npm publish --access public
-```
-
 ### 使用
 
 #### 1. 首次生成代码职责地图
