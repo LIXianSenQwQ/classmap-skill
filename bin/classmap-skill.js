@@ -33,8 +33,8 @@ Options:
   -v, --version     Show package version.
 
 Examples:
-  npx @lixiansen/classmap-skill install
-  npx @lixiansen/classmap-skill install --target ~/.codex/skills`);
+  npx @qingyuwanan/classmap-skill install
+  npx @qingyuwanan/classmap-skill install --target ~/.codex/skills`);
 }
 
 function expandHome(inputPath) {

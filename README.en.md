@@ -92,7 +92,7 @@ Classmap Skill is not a replacement for a full knowledge graph. It is a low-cost
 Use npm with `npx` for one-command installation:
 
 ```bash
-npx @lixiansen/classmap-skill install
+npx @qingyuwanan/classmap-skill install
 ```
 
 By default, the installer copies both skills into `~/.agents/skills`:
@@ -105,7 +105,7 @@ If those directories already exist, the installer overwrites them directly. It o
 To install into another skills directory, pass `--target`:
 
 ```bash
-npx @lixiansen/classmap-skill install --target ~/.codex/skills
+npx @qingyuwanan/classmap-skill install --target ~/.codex/skills
 ```
 
 ### Usage

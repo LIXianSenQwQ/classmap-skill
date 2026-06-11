@@ -92,7 +92,7 @@ Classmap Skill 面向日常 AI coding 场景，提供低成本、可人工维护
 推荐通过 npm 使用 `npx` 一键安装：
 
 ```bash
-npx @lixiansen/classmap-skill install
+npx @qingyuwanan/classmap-skill install
 ```
 
 默认会把两个 skill 安装到 `~/.agents/skills`：
@@ -105,7 +105,7 @@ npx @lixiansen/classmap-skill install
 如果需要安装到其他 skills 目录，可以指定 `--target`：
 
 ```bash
-npx @lixiansen/classmap-skill install --target ~/.codex/skills
+npx @qingyuwanan/classmap-skill install --target ~/.codex/skills
 ```
 
 ### 使用
