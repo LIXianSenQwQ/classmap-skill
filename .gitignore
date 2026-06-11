@@ -1,0 +1,5 @@
+node_modules/
+*.tgz
+tmp-skills/
+tmp-skills-pack/
+npm-debug.log*

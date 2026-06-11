@@ -1,0 +1,4 @@
+interface:
+  display_name: "Classmap Maintain"
+  short_description: "Create and maintain CLASSMAP.md code responsibility maps."
+  default_prompt: "Create or refresh CLASSMAP.md for this project."

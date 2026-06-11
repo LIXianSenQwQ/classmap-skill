@@ -1,0 +1,4 @@
+interface:
+  display_name: "Classmap Target"
+  short_description: "Use CLASSMAP.md to route code changes to likely files."
+  default_prompt: "Use CLASSMAP.md to identify the files most likely to change."

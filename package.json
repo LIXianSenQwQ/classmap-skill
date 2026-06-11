@@ -1,0 +1,39 @@
+{
+  "name": "@lixiansen/classmap-skill",
+  "version": "0.1.0",
+  "description": "Install Classmap skills for AI coding agents.",
+  "type": "module",
+  "bin": {
+    "classmap-skill": "./bin/classmap-skill.js"
+  },
+  "files": [
+    "bin/",
+    "classmap-maintain/",
+    "classmap-target/",
+    "README.md",
+    "README.en.md"
+  ],
+  "scripts": {
+    "check": "node bin/classmap-skill.js --help"
+  },
+  "keywords": [
+    "ai",
+    "agent",
+    "skills",
+    "classmap",
+    "codex"
+  ],
+  "author": "清羽",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/LIXianSenQwQ/classmap-skill.git"
+  },
+  "bugs": {
+    "url": "https://github.com/LIXianSenQwQ/classmap-skill/issues"
+  },
+  "homepage": "https://github.com/LIXianSenQwQ/classmap-skill#readme",
+  "engines": {
+    "node": ">=18"
+  }
+}
