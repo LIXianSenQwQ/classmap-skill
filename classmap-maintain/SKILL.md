@@ -1,138 +1,62 @@
 ---
 name: classmap-maintain
-description: Create, repair, and maintain CLASSMAP.md, a lightweight code responsibility map for a project. Use when onboarding to an existing codebase, when CLASSMAP.md is missing, stale, incomplete, or contradicts code, after major refactors, after adding important modules, or when the user asks to refresh the code map. This skill maps code ownership; do not use it to implement feature changes directly.
+description: Create, refresh, or inspect CLASSMAP.md, a lightweight code responsibility index. Use when the task calls for building a code map, updating it after responsibility changes, or checking whether it still matches the code. Inspection-only requests are read-only; this skill does not implement business features.
 ---
 
 # classmap-maintain
 
-Maintain `CLASSMAP.md`: a lightweight, human-readable code responsibility map for AI coding sessions.
+Maintain `CLASSMAP.md` so an agent can answer: "Which code should I inspect for this behavior, and where does its responsibility end?"
 
-The goal is to help future agents locate the right classes, modules, components, services, controllers, repositories, hooks, stores, APIs, and tests without broad repository search.
+Keep it a small, human-readable index of useful entrypoints and responsibilities.
 
-## Core Rule
+## Scope
 
-Prefer reading code over asking the user.
-
-Ask only when code and existing docs cannot resolve an important ambiguity. If code and `CLASSMAP.md` disagree, trust code and update `CLASSMAP.md`.
-
-## Responsibilities
-
-Use this skill to:
-
-- Create `CLASSMAP.md` when it does not exist.
-- Repair stale, incomplete, or inaccurate entries.
-- Add important newly discovered code units.
-- Mark unclear or mixed responsibilities instead of guessing.
-- Preserve useful manual notes unless they contradict code.
-- Keep the map useful for future AI coding tasks.
-
-Do not:
-
-- Implement feature changes.
-- Rewrite unrelated business code.
-- Turn `CLASSMAP.md` into a glossary.
-- Put domain terminology explanations in `CLASSMAP.md`; use `CONTEXT.md`.
-- Put architecture decisions in `CLASSMAP.md`; use `docs/adr/` or design docs.
-- Put task plans, PRDs, issue text, or source-code dumps in `CLASSMAP.md`.
+- A request limited to inspection, explanation, or drift checking is read-only. Report discrepancies without editing the map.
+- A request to create, refresh, or repair the map authorizes maintenance within that scope. A bare invocation uses the default create-or-refresh task.
+- A missing or stale map alone does not authorize creating or updating it during another task.
+- Prefer code evidence over asking the user. Ask only when an important ambiguity cannot be resolved from code and relevant docs.
+- Trust current code when it conflicts with the map. Do not implement business features as part of map maintenance.
 
 ## Workflow
 
-1. Inspect existing context:
-   - `CLASSMAP.md`
-   - `CODEMAP.md`
-   - `CONTEXT.md`
-   - `README.md`
-   - `docs/`
-   - package/module structure
+1. Confirm the project and requested scope. Read the existing `CLASSMAP.md` and inspect the relevant source/module structure. Consult `README.md`, `CODEMAP.md`, `CONTEXT.md`, or specific docs only where they help identify entrypoints; do not read all documentation by default.
+2. Start from the main behaviors in scope and follow their entrypoints into the responsible code. Ignore generated, vendor, dependency, and build output.
+3. Verify paths and responsibilities in code. Use existing docs as navigation clues. Describe specific uncertainty when a responsibility cannot be confirmed; do not guess or assign confidence scores.
+4. For inspection, report the verified findings. For maintenance, make targeted edits, preserving useful manual notes and existing layout unless they contradict code. Do not convert a useful existing map solely to match the example below.
+5. For a first map, stop when the identified main behaviors have reliable entrypoints and important boundaries are clear. Briefly note uncovered areas if coverage is partial; exhaustive file coverage is unnecessary. For an existing map, stop when the requested scope is checked or updated.
 
-2. Detect the project shape:
-   - frontend, backend, full-stack, library, monorepo
-   - main frameworks
-   - source directories
-   - test directories
-   - generated, vendor, dependency, and build directories to ignore
+## What to Include
 
-3. Build or update the map:
-   - Start from high-level features and entrypoints.
-   - Identify important code units, not every tiny helper.
-   - For each code unit, capture ownership, non-ownership, dependencies, callers, related tests, and change triggers.
-   - Ground every entry in code or existing docs.
+Include code that helps a future task choose where to look:
 
-4. Keep edits scoped:
-   - For a missing map, create a useful first version.
-   - For a stale map, prefer accurate targeted updates over broad speculative rewrites.
-   - For unclear ownership, mark uncertainty explicitly.
+- Business entrypoints and core implementations that commonly receive behavior changes.
+- Code units whose similar names or shared workflows make their responsibilities easy to confuse.
+- Key handoffs between modules when they explain where a responsibility moves.
+- Configuration, tests, or supporting code only when they materially affect locating the behavior.
 
-5. Mark confidence and drift:
-   - `Confidence: high`
-   - `Confidence: medium`
-   - `Confidence: low`
-   - `unclear responsibility`
-   - `mixed responsibility`
-   - `possible doc/code drift`
+Do not inventory routine DTOs, wrappers, helpers, or tests. Include one only when its responsibility is useful for routing. Record callers or dependencies only when they clarify where to look next, not as a complete relationship list.
 
-## CLASSMAP.md Contract
+## Map Format
 
-Use this structure:
+For a new map, default to one table with three pieces of information: a feature or change cue, the primary code path, and its responsibility. Add a boundary only when it prevents confusion. For example:
 
 ```md
 # CLASSMAP.md
 
-## Purpose
+Use this index to choose candidate files, then verify current code. Entries cover the main behaviors, not every file.
 
-This file maps project features to code units so future AI coding sessions can locate the right files without broad repository search.
-
-## How to Use
-
-- Start here before changing behavior.
-- Use the Feature Index to find candidate code.
-- Use Code Unit Entries to understand ownership and non-ownership.
-- If this file disagrees with code, trust code and update this file.
-
-## Feature Index
-
-### Feature Name
-
-| Responsibility | Primary code | Related code | Change when |
-|---|---|---|---|
-
-## Code Unit Entries
-
-### `path/to/File.ext`
-
-**Kind:** service / controller / repository / component / hook / store / model / utility / test / config / other
-
-**Owns:**
-- ...
-
-**Does not own:**
-- ...
-
-**Called by:**
-- ...
-
-**Depends on:**
-- ...
-
-**Change this when:**
-- ...
-
-**Do not change this when:**
-- ...
-
-**Related tests:**
-- ...
-
-**Confidence:** high / medium / low
+| Feature / change cue | Primary code | Responsibility and boundary |
+|---|---|---|
+| Login validation, failed-login policy | `src/auth/LoginService.ts` | Coordinates login checks; token creation belongs to TokenService. |
+| Token creation, refresh | `src/auth/TokenService.ts` | Owns token generation and refresh rules. |
 ```
+
+Use repository-relative paths, adding a symbol name when a file has several distinct responsibilities. Follow the project's documentation language. The example paths are illustrative; use verified project paths in the actual map.
+
+Add short notes or feature groupings only when they help navigation. Avoid duplicating the table in a second set of per-file entries. Kind, caller lists, dependency lists, tests, confidence labels, and positive/negative change conditions are not required fields.
 
 ## Documentation Boundaries
 
-Keep responsibilities separated:
+Keep only facts that help locate code or distinguish responsibilities. Leave terminology in existing domain docs such as `CONTEXT.md`, decisions in design docs or `docs/adr/`, and plans in task docs. Do not create those documents as part of this skill.
 
-- Business terminology -> `CONTEXT.md`
-- Architecture decisions -> `docs/adr/`
-- Code responsibilities and routing -> `CLASSMAP.md`
-- Task plans, PRDs, issue narratives -> issue / PRD / task docs
-
-When unsure whether something belongs in `CLASSMAP.md`, include only facts that help an agent answer: "Which code unit should I inspect or change for this behavior?"
+Keep maintenance in Markdown; no dependency graph, full call-chain catalog, or automated indexing infrastructure is needed.

@@ -4,86 +4,88 @@
 
 ## One-liner
 
-Classmap Skill is a lightweight skill workflow that helps AI coding assistants identify code responsibilities before changing code.
+Classmap Skill uses one `CLASSMAP.md` to help AI coding assistants locate code responsibilities: which code owns a behavior, which file to inspect first, and which boundaries are easy to confuse.
 
-It connects features, code units, responsibilities, dependencies, callers, and change triggers through one `CLASSMAP.md`, so an AI coding assistant can route a request even when the user only describes the change and does not know which files should be edited.
+The map records "feature or change cue → code location → responsibility." The assistant verifies current code before recommending a target and proceeds to implementation only when requested.
 
 ## Problem
 
-Every time an AI assistant starts by searching the whole repository, locating the right files becomes painful. The common failure mode in AI coding is not code generation; it is that the user knows what should change, but not where that behavior lives:
+Users usually know what should change, but may not know where the behavior lives:
 
-- The user says "change login behavior", "add a payment callback", or "fix the order status bug", but the assistant does not know which class to inspect first.
-- If the assistant relies only on keyword search, it can hit many similarly named files with different responsibilities.
-- Similar class names and mixed responsibilities make the agent confuse controllers, services, repositories, and UI components.
-- After a code change, the documentation is not updated, so the next agent starts from stale context.
-- Full-repo search is noisy, while a real knowledge graph is often too expensive to build and maintain.
+- Requests such as "change login logic," "add a payment callback," or "fix an order status bug" first need the responsible code.
+- Similarly named classes, components, or modules can have different responsibilities; keyword matches still need interpretation.
+- After files move or responsibilities shift, outdated documentation can send the next task to the wrong location.
 
-Classmap Skill keeps the solution small:
-
-> Use Markdown as an AI-readable code responsibility map, so every coding task starts with routing, not guessing.
+Classmap Skill provides a lightweight, human-maintainable responsibility index to narrow the reading scope.
 
 ## Features
 
 ### Two skills, one map
 
-- `classmap-maintain`
-  - Creates, repairs, and maintains `CLASSMAP.md`.
-  - Use it when onboarding to a project, after major refactors, after adding important modules, or when the map is missing or stale.
-  - It maps code ownership. It does not implement feature changes directly.
+| Skill | Responsibility |
+|---|---|
+| `classmap-maintain` | Creates, refreshes, or inspects the map as requested; inspection-only tasks are read-only, and it does not implement business features. |
+| `classmap-target` | Selects candidate code and verifies it before recommending targets; continues into implementation when requested and synchronizes relevant entries in an existing map when needed. |
 
-- `classmap-target`
-  - Reads `CLASSMAP.md` and routes a feature request, bug report, or refactor to the most relevant code units.
-  - Use it before day-to-day coding work.
-  - It may update `CLASSMAP.md` only for files inspected, changed, or created during the current task.
+### Three pieces of information by default
 
-### Route first, code second
-
-`classmap-target` produces a routing note before implementation:
+This illustrative map shows the format; actual entries must come from verified project code:
 
 ```md
-## Target recommendation
+# CLASSMAP.md
 
-### Primary targets
+Use this index to choose candidate files, then verify current code. Entries cover the main behaviors, not every file.
 
-1. `src/auth/LoginService.ts`
-   - Reason: owns login business flow.
-   - Change here if: login rules or failed-login policy changes.
-
-### Secondary targets
-
-1. `src/auth/AuthController.ts`
-   - Reason: HTTP entrypoint for login.
-   - Touch only if: request or response contract changes.
-
-### Probably not targets
-
-- `src/auth/JwtProvider.ts`
-  - Avoid unless: token claims or signing behavior changes.
+| Feature / change cue | Primary code | Responsibility and boundary |
+|---|---|---|
+| Login validation, failed-login policy | `src/auth/LoginService.ts` | Coordinates login checks; token creation belongs to TokenService. |
+| Token creation, refresh | `src/auth/TokenService.ts` | Owns token generation and refresh rules. |
 ```
 
-The agent clarifies what to change, what to inspect later, and what to avoid before touching code.
+Paths are relative to the repository root; add a symbol name when a file has several responsibilities. Describe boundaries only where they prevent confusion. Record callers, dependencies, and tests only when they help locate code; no additional fixed fields are required. For unconfirmed responsibilities, describe the missing evidence instead of assigning confidence scores.
+
+Prioritize common business entrypoints, core implementations, easily confused responsibilities, and key handoffs between modules. Do not inventory routine DTOs, wrappers, helpers, or tests. A first map can stop once the identified main behaviors are covered, briefly noting uncovered areas when needed.
+
+Preserve useful existing layouts and manual notes. There is no mandatory format migration or duplicate set of per-file details.
+
+### Verify before recommending targets
+
+Usually, consult the map and then read candidate code. When the user supplies a specific file or symbol, start there and consult the map as useful.
+
+After verification, a short note can be enough:
+
+```md
+- Start with `src/auth/LoginService.ts`: its login flow coordinates credential checks and failed-login policy.
+- Also inspect `src/auth/AuthController.ts` if request or response fields change; it owns the HTTP contract.
+```
+
+Add related files or exclusion reasons only when useful. Fixed primary/secondary/excluded sections and search-budget reports are unnecessary. Distinguish verified responsibilities from unresolved candidates; locating responsible code does not prove a bug's root cause.
+
+A missing map entry does not mean the code is absent. When candidates do not explain the behavior, follow entrypoints and callers, then expand to module searches or repository-wide targeted searches as needed. If no likely module is known, search directly. When the map is missing, complete the current routing task without creating it.
+
+### Clear write boundaries and focused updates
+
+| User request | Behavior |
+|---|---|
+| Location, explanation, analysis, review, or drift inspection only | Read-only; report routing evidence, unresolved questions, and discrepancies. |
+| Implement or fix a feature | Complete the request; synchronize relevant entries in an existing map when routing facts change. |
+| Create, refresh, or repair the map | Use `classmap-maintain` within the requested scope. |
+
+Update an existing map only when future routing is affected: an important responsibility is added, transferred, or removed; a move, rename, or deletion affects an existing path; a primary entrypoint changes; or the task confirms an incorrect routing entry.
+
+Routine helpers or tests, internal dependency changes, and fixes within an unchanged responsibility do not independently trigger updates. Update only relevant entries verified during the task and report drift outside its scope. Map creation and broader refreshes do not block the current task.
 
 ### Clear documentation boundaries
 
-`CLASSMAP.md` is only for code ownership and routing:
+`CLASSMAP.md` stores responsibilities and routing clues only. Keep terminology, architecture decisions, and task plans in existing domain docs such as `CONTEXT.md`, design docs or `docs/adr/`, and task docs respectively. The skills do not create those documents automatically.
 
-- Code responsibilities, dependencies, callers -> `CLASSMAP.md`
-- Business terminology -> `CONTEXT.md`
-- Architecture decisions -> `docs/adr/`
-- Task plans -> issues, PRDs, or task docs
+## Working with Other Approaches
 
-This keeps the map from becoming a noisy README, glossary, or TODO list.
-
-## Comparison
-
-| Approach | Pros | Cons | Classmap Skill's role |
-|---|---|---|---|
-| Regular README | Easy for humans to read and good for project introduction | Usually too broad to tell an agent which class owns a behavior | README explains the project; `CLASSMAP.md` routes code changes |
-| CODEMAP / directory map | Useful for module and folder structure | Often stops at module level and misses responsibility boundaries | Adds owns / does not own / change when for important code units |
-| Keyword search / full-repo search | Fast and requires no maintenance | Matches text, not ownership; noisy context and easy false positives | Read the map first and map natural-language requests to responsible code units |
-| Knowledge graph | Precise relationships, queryable, visualizable | Needs schema, extraction pipeline, storage, and maintenance | Use a Markdown-based lightweight graph to solve everyday code targeting with lower maintenance cost |
-
-Classmap Skill is not a replacement for a full knowledge graph. It is a low-cost, human-maintainable navigation layer optimized for AI coding sessions.
+| Approach | Classmap Skill's role |
+|---|---|
+| README / CODEMAP / directory structure | Adds behavior-to-code responsibilities and easily confused boundaries to existing project documentation. |
+| Keyword search | Supplies candidates, then uses code reads and targeted searches to verify or extend them. |
+| Dependency graphs / impact analysis systems | Focuses on everyday responsibility lookup without maintaining complete call relationships or providing complete impact analysis. |
 
 ## Quick Start
 
@@ -110,7 +112,7 @@ npx @qingyuwanan/classmap-skill install --target ~/.codex/skills
 
 ### Usage
 
-#### 1. Create the first code responsibility map
+#### 1. Create or refresh the map
 
 Inside an existing project, run:
 
@@ -118,51 +120,53 @@ Inside an existing project, run:
 /classmap-maintain
 ```
 
-It will inspect the project structure and important code, then create or refresh `CLASSMAP.md`.
+With no additional request, this defaults to creating or refreshing `CLASSMAP.md`. You can also limit maintenance to one module.
 
-#### 2. Route changes before coding
-
-Example:
+#### 2. Locate code without modifying it
 
 ```txt
-/classmap-target I want to add email verification to login. First identify which classes should change.
+/classmap-target I want to add email verification to login. Only identify the relevant code; do not modify anything yet.
 ```
 
 Expected flow:
 
 ```txt
-Read CLASSMAP.md
--> Produce Primary / Secondary / Probably not targets
--> Verify by reading a small set of candidate files
--> Continue into implementation
--> Incrementally update CLASSMAP.md if the task changes responsibilities
+Read the map or start from a supplied file
+-> Read candidate code and use targeted search if needed
+-> Report verified responsibilities, locations, and remaining uncertainty
+-> Stop without modifying code or the map
 ```
 
-#### 3. Refresh stale maps
-
-When `CLASSMAP.md` no longer matches the code, or after a large refactor:
+#### 3. Locate and implement
 
 ```txt
-/classmap-maintain Check whether this project's CLASSMAP.md is stale and refresh it.
+/classmap-target Add email verification to login. First locate the relevant code, then implement the change.
+```
+
+Continue into implementation after verifying the targets. Synchronize relevant entries in an existing map only when future routing is affected. A missing map is not created automatically.
+
+#### 4. Inspect or repair stale entries
+
+Inspect without writing files:
+
+```txt
+/classmap-maintain Check the login module's CLASSMAP.md entries for drift and report only.
+```
+
+Explicitly request a repair:
+
+```txt
+/classmap-maintain Verify and update stale entries for the login module, preserving other modules.
 ```
 
 ## Who It Is For
 
-Use this if you:
+- People who frequently use AI to modify existing projects and want to retain key code responsibilities across sessions.
+- Teams with several modules or easily confused responsibilities that want less routing noise.
+- Projects that want a small set of reliable entrypoints maintained in Markdown without a complete code index.
 
-- Often use AI agents to modify existing codebases.
-- Want fewer broad searches and fewer wrong-file edits.
-- Maintain projects in any programming language; the larger and more modular the project is, the more useful the map becomes.
-- Want a lightweight code knowledge map while avoiding the maintenance cost of a graph database or AST pipeline.
-
-This is less useful when:
-
-- The project is only a tiny demo.
-- Your team already has mature automated dependency and impact analysis.
-- You need a fully automated code intelligence system with strict machine-queryable relationships.
+A tiny demo with only a few files usually does not need a separate map. Complete dependency queries, strict impact analysis, and fully automatic zero-maintenance indexing are also outside this project's scope.
 
 ## Star
 
 If this saves you from even one "I can describe the change but do not know which file to edit" moment, please consider giving the project a Star.
-
-More Stars make it easier to justify adding real-world examples, `CLASSMAP.md` templates, and setup notes for more coding agents.

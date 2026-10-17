@@ -1,141 +1,63 @@
 ---
 name: classmap-target
-description: Use CLASSMAP.md to route feature requests, bug reports, refactors, and behavior changes to the smallest accurate set of relevant code units. Use before coding when the user asks where to change behavior, which class or file owns a feature, where a bug may live, or how to implement a change with minimal search. This skill may incrementally update CLASSMAP.md only for files inspected, changed, or created during the current task.
+description: Locate the code responsible for a behavior using CLASSMAP.md and focused code verification. Use to locate files for feature changes, bug fixes, or refactors, or to answer which code owns a behavior. Location-only requests are read-only; implementation tasks may synchronize relevant routing facts in an existing map.
 ---
 
 # classmap-target
 
-Use `CLASSMAP.md` as the first navigation layer for AI coding.
+Use `CLASSMAP.md` to choose candidate code, then verify its responsibilities in the current source.
 
-The goal is to map the user's request to the smallest accurate set of classes, modules, components, services, controllers, repositories, hooks, stores, APIs, and tests.
+The result should explain where to look first and any boundary that matters to the request. Locating responsible code does not by itself establish a bug's root cause.
 
-## Core Rule
+## Scope
 
-Read `CLASSMAP.md` first.
-
-Do not begin with broad repository search. Use the map to choose likely files, then verify with small focused code reads.
-
-## Responsibilities
-
-Use this skill to:
-
-- Parse the user's requested feature, bug, refactor, or behavior change.
-- Find the most relevant code units from `CLASSMAP.md`.
-- Explain why each candidate is or is not a target.
-- Read primary target files before searching elsewhere.
-- Use focused search only when the map is missing, incomplete, or suspicious.
-- Implement the requested code change when the user asked for coding.
-- Incrementally update `CLASSMAP.md` only for files changed, created, or directly verified during this task.
-
-Do not:
-
-- Rebuild the entire `CLASSMAP.md`.
-- Scan the whole repository by default.
-- Rewrite unrelated classmap sections.
-- Update entries for files you did not inspect or touch.
-- Treat `CLASSMAP.md` as authoritative when code contradicts it.
-- Ignore the actual code when the map and code disagree.
+- Requests limited to location, explanation, analysis, or review are read-only, including the map. Report any drift without repairing it.
+- Continue into implementation only when the user requests it, following the project's normal coding workflow. This skill adds routing guidance, not a separate implementation process.
+- During implementation, synchronize an existing map only under the incremental rule below and within the user's authorized scope.
+- Creating or broadly refreshing a map belongs to `classmap-maintain` when requested. Do not make it a prerequisite for the current task.
 
 ## Workflow
 
-1. Parse the request:
-   - feature
-   - behavior
-   - bug symptom
-   - domain nouns
-   - UI entrypoint
-   - API endpoint
-   - event, job, or handler
-   - data model
-   - expected change
+1. Identify the requested behavior and useful clues, such as a feature name, symptom, route, event, or symbol. Distinguish a location-only request from an implementation request.
+2. If the user supplied a specific file or symbol, start there and consult the map as useful. Otherwise, read relevant parts of `CLASSMAP.md` to select candidates. If the map is missing, briefly say so and use focused search for this task; do not create it.
+3. Read candidate code before presenting a recommendation. Verify the paths and responsibilities, following relevant entrypoints or callers where needed. Trust code over the map and state any remaining uncertainty.
+4. If the candidates do not explain the behavior, expand search as described below.
+5. Output a concise, verified routing note. For a location-only request, stop after the recommendation and any verification limits. For implementation, continue with the requested change, then consider a scoped map update.
 
-2. Read `CLASSMAP.md`.
+## Search When Needed
 
-3. Produce a target recommendation before coding.
+An absent map entry is not evidence that the behavior is absent from the project.
 
-4. Verify by reading primary target files.
+Follow relevant entrypoints, callers, and implementations; search within the likely module, then use repository-wide targeted search if the location is still unresolved. Use request clues and code evidence as search terms. Skip a narrower step when there is no useful module or candidate to start from.
 
-5. Use limited search only if needed:
-   - Search for names, methods, routes, events, or concepts discovered from `CLASSMAP.md`.
-   - Avoid broad exploratory search unless `CLASSMAP.md` is missing or clearly stale.
+Avoid aimless repository exploration. A precise repository-wide search can be appropriate even when a map exists. Stop expanding once the relevant responsibility is sufficiently supported by code; no fixed file or search-count budget is required.
 
-6. Make the code change if the user requested implementation.
+If the responsible code cannot be confirmed, report what was checked and what remains unresolved rather than presenting a guess as verified.
 
-7. After code changes, update `CLASSMAP.md` only for the current task scope.
+## Routing Note
 
-## Target Recommendation Format
+Name the primary file or files and explain the responsibility verified in code. Add relevant symbols or locations when useful. Include related files only with a reason or condition for inspecting them. Mention excluded candidates only when they resolve a real ambiguity.
 
-Before coding, output a concise routing note:
+Keep the format proportional to the request. For example, after checking the relevant code:
 
 ```md
-## Target recommendation
-
-### Primary targets
-
-1. `path/to/File.ext`
-   - Reason:
-   - Change here if:
-
-### Secondary targets
-
-1. `path/to/File.ext`
-   - Reason:
-   - Touch only if:
-
-### Probably not targets
-
-- `path/to/File.ext`
-  - Avoid unless:
-
-### Search budget
-
-- Start with the primary targets.
-- Use focused search only if these files do not explain the behavior.
+- Start with `src/auth/LoginService.ts`: its login flow coordinates credential checks and failed-login policy.
+- Also inspect `src/auth/AuthController.ts` if request or response fields change; it owns the HTTP contract.
 ```
 
-If the user explicitly asked for only a location/routing answer, stop after the recommendation and verification summary. If the user asked for implementation, continue after the routing note.
+Do not generate empty primary/secondary/excluded sections or a search-budget report. Separate verified responsibilities from unresolved candidates; describe the specific missing evidence instead of assigning confidence scores.
 
-## Incremental CLASSMAP Update Rule
+## Incremental Map Updates
 
-After modifying code, update `CLASSMAP.md` if and only if one of these happened:
+After an implementation task, update an existing `CLASSMAP.md` only when verified facts in the task's scope would otherwise cause a future agent to look in the wrong place, miss an entrypoint, or misunderstand a responsibility:
 
-- A new class, module, component, service, controller, repository, hook, store, API, job, event handler, or test was added.
-- A touched file's responsibility changed.
-- A new dependency or caller relationship was introduced.
-- A feature now maps to a different primary file.
-- The existing map was clearly wrong for the touched files.
+- An important responsibility was added, transferred, or removed.
+- A file was moved, renamed, or deleted, affecting an existing routing path.
+- A feature's primary entrypoint changed.
+- The task confirmed that an existing routing entry was wrong.
 
-Do not update unrelated entries.
+Adding routine helpers or tests, changing an internal dependency, or fixing behavior within an unchanged responsibility does not by itself require an update.
 
-If broader drift is found, mention it in the final response instead of repairing the whole map:
+Update only affected entries whose facts were verified during this task, including obsolete paths confirmed through the move or deletion. Preserve the existing useful layout and manual notes; do not migrate formats or rebuild the map. Use feature/change cues, code paths, and concise responsibilities, adding boundaries only where helpful.
 
-```txt
-CLASSMAP.md appears stale beyond this task. Run /classmap-maintain for a broader refresh.
-```
-
-## Drift Handling
-
-If `CLASSMAP.md` conflicts with code:
-
-- Trust the code.
-- Mention the mismatch.
-- Fix the entry only if it is inside the current task scope.
-- Otherwise recommend `classmap-maintain`.
-
-Example:
-
-```txt
-CLASSMAP drift detected:
-- CLASSMAP.md says `LoginService` owns token creation.
-- Code shows token creation is now in `TokenService`.
-- This task only touches login validation, so do not rewrite the token entries now.
-```
-
-## Missing CLASSMAP.md
-
-If `CLASSMAP.md` is missing:
-
-- Say that the routing map is unavailable.
-- Use focused repository search for the current task only.
-- Recommend running `classmap-maintain` after the task to create the map.
-- Do not create a full `CLASSMAP.md` from this skill unless the current task itself adds or verifies enough entries for a small scoped update.
+Report drift outside the task's scope without fixing it. When the map is missing or needs broader maintenance, suggest `classmap-maintain` as a separate task and continue the current work without that dependency.
